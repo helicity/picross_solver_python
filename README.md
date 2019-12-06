@@ -7,8 +7,9 @@ picross solver written in python
 - [x] board/problem representation
 - [x] load problem from text file
 - [x] basic pattern search algorithm
-- [ ] judgement of finished status
+- [x] judgement of finished status
 - [ ] judgement of impossible problem
+- [ ] enhance algorithm (speed up)
 - [ ] apply guess/solve algorithm
 - [ ] gui for user intervention/test (TBD) 
 - [ ] judgement of multiple solution

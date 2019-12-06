@@ -40,7 +40,7 @@ picross solver
 '''
 
 from itertools import combinations
-
+import time
 
 
 class Board:
@@ -58,6 +58,8 @@ class Board:
         self.num_cols = 0
 
         self.show_each_step = True
+        self.print_info_on_load = False
+        self.print_step_time = False
 
     def _read_next_effective_line_from( self, file ):
         while True:
@@ -74,7 +76,7 @@ class Board:
             f = open(file_name, 'r')
         except:
             print('Cannot open file %s' % file_name)
-            return
+            return False
 
         try:
             line = self._read_next_effective_line_from(f)
@@ -91,7 +93,7 @@ class Board:
                 self.problem_cols.append(problem)
         except:
             print('Format error !')
-            return
+            return False
 
         for _ in range(self.num_rows):
             self.board_rows.append( [Board.UNKNOWN]*self.num_cols )
@@ -101,21 +103,16 @@ class Board:
             
         f.close()
 
-        print(self.num_cols)
-        print(self.num_rows)
-        print(self.problem_rows)
-        print(self.problem_cols)
-        print(self.board_rows)
-        print(self.board_cols)
-        print('')
+        if self.print_info_on_load:
+            print(self.num_cols)
+            print(self.num_rows)
+            print(self.problem_rows)
+            print(self.problem_cols)
+            print(self.board_rows)
+            print(self.board_cols)
+            print('')
 
-    def set( self, x, y, val ):
-         self.board_rows[y][x] = val
-         self.board_cols[x][y] = val
-    
-    def get( self, x, y ):
-         # return self.board_rows[y][x]
-         return self.board_cols[x][y]
+        return True
 
     def _print_row( self, row ):
         ss = ""
@@ -134,9 +131,7 @@ class Board:
             ss = ''
             for c in range(self.num_cols):
                 if r<len(self.problem_cols[c]):
-                    ss += ' '
-                    ss += str((self.problem_cols[c])[r])
-                    ss += ' '
+                    ss += '{:2} '.format((self.problem_cols[c])[r])
                 else:
                     ss += '   '
             print(ss)
@@ -145,6 +140,14 @@ class Board:
         for i in range(self.num_rows):
             self._print_row(i)
         self._print_problem_cols()
+
+    def set( self, x, y, val ):
+         self.board_rows[y][x] = val
+         self.board_cols[x][y] = val
+    
+    def get( self, x, y ):
+         # return self.board_rows[y][x]
+         return self.board_cols[x][y]
 
     def _get_slice( self, total, slice ):
         '''
@@ -207,7 +210,7 @@ class Board:
                 m = Board.get( self, x, y )
                 if m != Board.UNKNOWN and v != m:
                     add = False
-                    continue
+                    break
             if add:
                 filtered_patterns.append(p)
         return filtered_patterns
@@ -223,27 +226,40 @@ class Board:
                 m = Board.get( self, x, y )
                 if m != Board.UNKNOWN and v != m:
                     add = False
-                    continue
+                    break
             if add:
                 filtered_patterns.append(p)
         return filtered_patterns
 
-    def solve_static( self ):
+    def solve_static( self, x_indices=None, y_indices=None ):
         '''
         가로, 세로 모든 줄과 열을 한번 훑으면서
         보드의 configuration으로부터 바로 유추할 수 있는 칸들을 푼다
         '''
+
+        if self.print_step_time:
+            start = time.process_time()
+
         w = self.num_cols
         h = self.num_rows
 
+        if x_indices==None:
+            x_indices=range(w)
+        if y_indices==None:
+            y_indices=range(h)
+
+        changed_x = set()
+        changed_y = set()
+
         # 가로방향 풀이
-        for y in range(h):
+        for y in y_indices:
             problem = self.problem_rows[y]
 
             total_black = sum(problem)
             total_white = w-total_black
             num_slice = len(problem)+1
 
+            # TODO 매번 새로 계산하고 있는데, 줄별로 filtered_patterns를 저장하고 갱신해나가면 된다.
             white_slices = Board._get_slices( self, total_white, num_slice )
             patterns = Board._get_pattern( self, problem, white_slices )
             filtered_patterns = Board._filter_patterns_h( self, y, patterns )
@@ -253,26 +269,30 @@ class Board:
                 print(patterns)
                 print(filtered_patterns)
 
+            if len(filtered_patterns)<=0: continue
             for x in range(w):
                 m = Board.get( self, x, y )
-                if m==Board.UNKNOWN:
-                    m = filtered_patterns[0][x]
+                if m!=Board.UNKNOWN: continue
                 b = True
+                m = filtered_patterns[0][x]
                 for p in filtered_patterns:
                     if p[x]!=m:
                         b = False
                         break
                 if b:
                     Board.set( self, x, y, m )
+                    changed_x.add(x)
+                    changed_y.add(y)
 
         # 세로방향 풀이
-        for x in range(w):
+        for x in x_indices:
             problem = self.problem_cols[x]
 
             total_black = sum(problem)
             total_white = h-total_black
             num_slice = len(problem)+1
 
+            # TODO 매번 새로 계산하고 있는데, 열별로 filtered_patterns를 저장하고 갱신해나가면 된다.
             white_slices = Board._get_slices( self, total_white, num_slice )
             patterns = Board._get_pattern( self, problem, white_slices )
             filtered_patterns = Board._filter_patterns_v( self, x, patterns )
@@ -282,14 +302,22 @@ class Board:
                 print(patterns)
                 print(filtered_patterns)
 
+            if len(filtered_patterns)<=0: continue
             for y in range(h):
                 m = Board.get( self, x, y )
-                if m==Board.UNKNOWN:
-                    m = filtered_patterns[0][y]
+                if m!=Board.UNKNOWN: continue
                 b = True
+                m = filtered_patterns[0][y]
                 for p in filtered_patterns:
                     if p[y]!=m:
                         b = False
                         break
                 if b:
                     Board.set( self, x, y, m )
+                    changed_x.add(x)
+                    changed_y.add(y)
+
+        if self.print_step_time:
+            print( 'time = %5.2f' % (time.process_time()-start) )
+
+        return list(changed_x), list(changed_y)
