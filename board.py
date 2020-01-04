@@ -41,7 +41,7 @@ picross solver
 
 from itertools import combinations
 import time
-
+import sys
 
 class Board:
 
@@ -73,7 +73,7 @@ class Board:
 
     def load( self, file_name ):
         try:
-            f = open(file_name, 'r')
+            f = open(file_name, 'r', encoding="utf-8")
         except:
             print('Cannot open file %s' % file_name)
             return False
@@ -92,6 +92,7 @@ class Board:
                 problem = [int(a) for a in line.split()]
                 self.problem_cols.append(problem)
         except:
+            print("Unexpected error:", sys.exc_info()[0])
             print('Format error !')
             return False
 
