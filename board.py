@@ -200,6 +200,37 @@ class Board:
             ensemble.append(branch)
         return ensemble
 
+    DicX = {}
+    DicY = {}
+
+    def GetPatternsX( self, x, h, problem ):
+        if x in self.DicX:
+            return self.DicX.get(x)
+
+        total_black = sum(problem)
+        total_white = h-total_black
+        num_slice = len(problem)+1
+
+        white_slices = Board._get_slices( self, total_white, num_slice )
+        patterns = Board._get_pattern( self, problem, white_slices )
+
+        self.DicX[x] = patterns
+        return patterns
+
+    def GetPatternsY( self, y, w, problem ):
+        if y in self.DicY:
+            return self.DicY.get(y)
+
+        total_black = sum(problem)
+        total_white = w-total_black
+        num_slice = len(problem)+1
+
+        white_slices = Board._get_slices( self, total_white, num_slice )
+        patterns = Board._get_pattern( self, problem, white_slices )
+
+        self.DicY[y] = patterns
+        return patterns
+
     def _filter_patterns_h( self, y, patterns ):
         '''
         y번째줄의 패턴에서 현재 보드와 맞지않는것들을 제거한다.
@@ -255,14 +286,7 @@ class Board:
         # 가로방향 풀이
         for y in y_indices:
             problem = self.problem_rows[y]
-
-            total_black = sum(problem)
-            total_white = w-total_black
-            num_slice = len(problem)+1
-
-            # TODO 매번 새로 계산하고 있는데, 줄별로 filtered_patterns를 저장하고 갱신해나가면 된다.
-            white_slices = Board._get_slices( self, total_white, num_slice )
-            patterns = Board._get_pattern( self, problem, white_slices )
+            patterns = Board.GetPatternsY( self, y, w, problem )
             filtered_patterns = Board._filter_patterns_h( self, y, patterns )
             if self.show_each_step:
                 print('row',y)
@@ -288,14 +312,7 @@ class Board:
         # 세로방향 풀이
         for x in x_indices:
             problem = self.problem_cols[x]
-
-            total_black = sum(problem)
-            total_white = h-total_black
-            num_slice = len(problem)+1
-
-            # TODO 매번 새로 계산하고 있는데, 열별로 filtered_patterns를 저장하고 갱신해나가면 된다.
-            white_slices = Board._get_slices( self, total_white, num_slice )
-            patterns = Board._get_pattern( self, problem, white_slices )
+            patterns = Board.GetPatternsX( self, x, h, problem )
             filtered_patterns = Board._filter_patterns_v( self, x, patterns )
             if self.show_each_step:
                 print('row',y)
